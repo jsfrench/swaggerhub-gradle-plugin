@@ -7,7 +7,6 @@ import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 import org.gradle.api.GradleException;
-import io.swagger.swaggerhub.client.SwaggerHubRequest;
 
 import java.io.IOException;
 
@@ -18,6 +17,7 @@ public class SwaggerHubClient {
     private final String token;
     private final String protocol;
     private static final String APIS = "apis";
+    private static final String DOMAINS = "domains";
 
 
     public SwaggerHubClient(String host, int port, String protocol, String token) {
@@ -61,6 +61,7 @@ public class SwaggerHubClient {
 
     public void saveDefinition(SwaggerHubRequest swaggerHubRequest) throws GradleException {
         HttpUrl httpUrl = getUploadUrl(swaggerHubRequest);
+
         MediaType mediaType = MediaType.parse("application/" + swaggerHubRequest.getFormat());
 
         final Request httpRequest = buildPostRequest(httpUrl, mediaType, swaggerHubRequest.getSwagger());
@@ -89,26 +90,35 @@ public class SwaggerHubClient {
     }
 
     private HttpUrl getDownloadUrl(SwaggerHubRequest swaggerHubRequest) {
-        return getBaseUrl(swaggerHubRequest.getOwner(), swaggerHubRequest.getApi())
+        return getBaseUrl(swaggerHubRequest.getOwner(), swaggerHubRequest.getSpecification(), getSpecType(swaggerHubRequest))
                 .addEncodedPathSegment(swaggerHubRequest.getVersion())
                 .build();
     }
 
     private HttpUrl getUploadUrl(SwaggerHubRequest swaggerHubRequest) {
-        return getBaseUrl(swaggerHubRequest.getOwner(), swaggerHubRequest.getApi())
+        return getBaseUrl(swaggerHubRequest.getOwner(), swaggerHubRequest.getSpecification(), getSpecType(swaggerHubRequest))
                 .addEncodedQueryParameter("version", swaggerHubRequest.getVersion())
                 .addEncodedQueryParameter("isPrivate", Boolean.toString(swaggerHubRequest.isPrivate()))
                 .addEncodedQueryParameter("oas", swaggerHubRequest.getOas())
                 .build();
     }
 
-    private HttpUrl.Builder getBaseUrl(String owner, String api) {
+    private HttpUrl.Builder getBaseUrl(String owner, String api, String segment) {
         return new HttpUrl.Builder()
                 .scheme(protocol)
                 .host(host)
                 .port(port)
-                .addPathSegment(APIS)
+                .addPathSegment(segment)
                 .addEncodedPathSegment(owner)
                 .addEncodedPathSegment(api);
+    }
+
+    private String getSpecType(SwaggerHubRequest swaggerHubRequest) {
+
+        if (swaggerHubRequest.getSpecType() == "domain") {
+            return DOMAINS;
+        } else {
+            return APIS;
+        }
     }
 }
